@@ -1,0 +1,45 @@
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment configurations and secrets
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Operating System temporary and metadata files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Editor and temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Temporary downloaded archives (preserve raw dataset files like data/SMSSpamCollection)
+data/*.zip
+data/*.tar.gz
+data/*.rar
+
+# Generated Python package metadata
+*.egg-info/

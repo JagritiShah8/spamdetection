@@ -1,0 +1,27 @@
+{
+  "best_model_key": "logistic_regression",
+  "best_model_name": "Logistic Regression",
+  "selected_by": "validation_f1",
+  "validation_f1": 0.9083333333333333,
+  "test_metrics": {
+    "accuracy": 0.9748653500897666,
+    "precision": 0.8757763975155279,
+    "recall": 0.9463087248322147,
+    "f1": 0.9096774193548388,
+    "roc_auc": 0.988298501234482,
+    "confusion_matrix": [
+      [
+        945,
+        20
+      ],
+      [
+        8,
+        141
+      ]
+    ],
+    "model_name": "Logistic Regression"
+  },
+  "n_train": 4458,
+  "n_test": 1114,
+  "random_state": 42
+}

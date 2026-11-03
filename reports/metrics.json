@@ -1,0 +1,193 @@
+{
+  "split_summary": {
+    "n_train": 4458,
+    "n_test": 1114,
+    "test_ham": 965,
+    "test_spam": 149
+  },
+  "best_model": "Logistic Regression",
+  "validation_metrics": {
+    "majority_baseline": {
+      "accuracy": 0.8654708520179372,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "roc_auc": 0.5,
+      "confusion_matrix": [
+        [
+          772,
+          0
+        ],
+        [
+          120,
+          0
+        ]
+      ],
+      "model_name": "Majority Baseline"
+    },
+    "multinomial_nb": {
+      "accuracy": 0.952914798206278,
+      "precision": 1.0,
+      "recall": 0.65,
+      "f1": 0.787878787878788,
+      "roc_auc": 0.9884499136442141,
+      "confusion_matrix": [
+        [
+          772,
+          0
+        ],
+        [
+          42,
+          78
+        ]
+      ],
+      "model_name": "Multinomial Naive Bayes"
+    },
+    "bernoulli_nb": {
+      "accuracy": 0.9719730941704036,
+      "precision": 0.9896907216494846,
+      "recall": 0.8,
+      "f1": 0.8847926267281107,
+      "roc_auc": 0.998931347150259,
+      "confusion_matrix": [
+        [
+          771,
+          1
+        ],
+        [
+          24,
+          96
+        ]
+      ],
+      "model_name": "Bernoulli Naive Bayes"
+    },
+    "bernoulli_nb_report_style": {
+      "accuracy": 0.8699551569506726,
+      "precision": 0.5084745762711864,
+      "recall": 1.0,
+      "f1": 0.6741573033707865,
+      "roc_auc": 0.9989097582037997,
+      "confusion_matrix": [
+        [
+          656,
+          116
+        ],
+        [
+          0,
+          120
+        ]
+      ],
+      "model_name": "Bernoulli NB (Report-Style)"
+    },
+    "logistic_regression": {
+      "accuracy": 0.9753363228699552,
+      "precision": 0.9083333333333333,
+      "recall": 0.9083333333333333,
+      "f1": 0.9083333333333333,
+      "roc_auc": 0.991731433506045,
+      "confusion_matrix": [
+        [
+          761,
+          11
+        ],
+        [
+          11,
+          109
+        ]
+      ],
+      "model_name": "Logistic Regression"
+    }
+  },
+  "test_metrics": {
+    "majority_baseline": {
+      "accuracy": 0.8662477558348295,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "roc_auc": 0.5,
+      "confusion_matrix": [
+        [
+          965,
+          0
+        ],
+        [
+          149,
+          0
+        ]
+      ],
+      "model_name": "Majority Baseline"
+    },
+    "multinomial_nb": {
+      "accuracy": 0.9730700179533214,
+      "precision": 1.0,
+      "recall": 0.7986577181208053,
+      "f1": 0.8880597014925372,
+      "roc_auc": 0.985217512257885,
+      "confusion_matrix": [
+        [
+          965,
+          0
+        ],
+        [
+          30,
+          119
+        ]
+      ],
+      "model_name": "Multinomial Naive Bayes"
+    },
+    "bernoulli_nb": {
+      "accuracy": 0.9829443447037702,
+      "precision": 0.9924242424242424,
+      "recall": 0.8791946308724832,
+      "f1": 0.9323843416370107,
+      "roc_auc": 0.9933546614737281,
+      "confusion_matrix": [
+        [
+          964,
+          1
+        ],
+        [
+          18,
+          131
+        ]
+      ],
+      "model_name": "Bernoulli Naive Bayes"
+    },
+    "bernoulli_nb_report_style": {
+      "accuracy": 0.8922800718132855,
+      "precision": 0.5547169811320755,
+      "recall": 0.9865771812080537,
+      "f1": 0.7101449275362319,
+      "roc_auc": 0.9936954480648189,
+      "confusion_matrix": [
+        [
+          847,
+          118
+        ],
+        [
+          2,
+          147
+        ]
+      ],
+      "model_name": "Bernoulli NB (Report-Style)"
+    },
+    "logistic_regression": {
+      "accuracy": 0.9748653500897666,
+      "precision": 0.8757763975155279,
+      "recall": 0.9463087248322147,
+      "f1": 0.9096774193548388,
+      "roc_auc": 0.988298501234482,
+      "confusion_matrix": [
+        [
+          945,
+          20
+        ],
+        [
+          8,
+          141
+        ]
+      ],
+      "model_name": "Logistic Regression"
+    }
+  }
+}

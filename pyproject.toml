@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spamdetector"
+version = "0.1.0"
+description = "Production-quality spam SMS detection in Python 3.12 without external ML frameworks."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy==1.26.4",
+    "pandas==2.1.4",
+    "matplotlib==3.8.4",
+    "streamlit>=1.35.0",
+    "pytest>=8.0.0",
+    "pyarrow==19.0.1",
+]
+
+[project.scripts]
+spamdetector = "spamdetector.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
