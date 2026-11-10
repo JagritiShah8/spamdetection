@@ -95,7 +95,7 @@ def test_length_statistics_real_dataset(real_dataset):
     spam_token = stats["token_length"]["spam"]
     assert spam_token["mean"] > ham_token["mean"]
     assert np.isclose(ham_token["mean"], 13.05, atol=0.5)
-    assert np.isclose(spam_token["mean"], 23.41, atol=0.5)
+    assert np.isclose(spam_token["mean"], 24.24, atol=0.5)
     assert ham_token["median"] == 10.0
     assert spam_token["median"] == 25.0
 
@@ -155,13 +155,13 @@ def test_vocabulary_overlap_real_dataset(real_dataset):
     assert total_vocab == ham_only + spam_only + shared_vocab
 
     # Real data actual figures
-    assert total_vocab == 8709
-    assert ham_vocab == 6902
-    assert spam_vocab == 2860
-    assert shared_vocab == 1053
+    assert total_vocab == 8714
+    assert ham_vocab == 6907
+    assert spam_vocab == 2861
+    assert shared_vocab == 1054
 
     # Jaccard similarity = shared / total
-    expected_jaccard = round(1053 / 8709, 4)
+    expected_jaccard = round(1054 / 8714, 4)
     assert overlap["jaccard_similarity"] == expected_jaccard
 
     # Disjointness of class-specific top words

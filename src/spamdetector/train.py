@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 import matplotlib
 matplotlib.use("Agg")
@@ -23,7 +23,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from spamdetector.dataset import load_sms_dataset, stratified_split
+from spamdetector.dataset import (
+    load_augmented_training_data,
+    load_sms_dataset,
+    stratified_split,
+)
 from spamdetector.metrics import compute_classification_metrics
 from spamdetector.models import (
     BaseModel,
@@ -37,20 +41,43 @@ from spamdetector.tfidf import TfidfVectorizer
 
 
 def get_model_instances() -> Dict[str, BaseModel]:
-    """Instantiate fresh model objects."""
+    """Instantiate fresh model objects with production hyper-parameters."""
     return {
         "majority_baseline": MajorityBaseline(),
         "multinomial_nb": MultinomialNaiveBayes(alpha=1.0),
         "bernoulli_nb": BernoulliNaiveBayes(alpha=1.0),
         "bernoulli_nb_report_style": BernoulliNBReportStyle(alpha=1.0),
         "logistic_regression": LogisticRegression(
-            n_features=2000,
-            epochs=300,
-            lr=0.5,
-            l2=0.01,
+            n_features=5000,
+            epochs=1000,
+            lr=6.0,
+            l2=0.0005,
             class_weight="inverse_frequency",
         ),
     }
+
+
+def find_optimal_threshold(
+    y_true: np.ndarray,
+    probs: np.ndarray,
+    thresholds: Sequence[float] | None = None,
+) -> Tuple[float, float]:
+    """Sweep thresholds on validation data to maximize F1 score with precision tie-breaking."""
+    if thresholds is None:
+        thresholds = [round(float(t), 2) for t in np.arange(0.20, 0.85, 0.05)]
+    best_t = 0.50
+    best_f1 = -1.0
+    best_prec = -1.0
+    for t in thresholds:
+        preds = (probs >= t).astype(int)
+        m = compute_classification_metrics(y_true, preds, probs)
+        f1 = float(m["f1"])
+        prec = float(m["precision"])
+        if f1 > best_f1 or (np.isclose(f1, best_f1, atol=1e-4) and prec > best_prec):
+            best_f1 = f1
+            best_prec = prec
+            best_t = float(t)
+    return best_t, best_f1
 
 
 def plot_confusion_matrix(cm: np.ndarray, model_name: str, output_path: Path) -> None:
@@ -108,49 +135,82 @@ def train_and_evaluate(
     y_subtrain = y_train[subtrain_idx]
     y_val = y_train[val_idx]
 
-    # Fit TF-IDF on sub-train only
-    val_tfidf = TfidfVectorizer(max_features=5000)
-    X_subtrain = val_tfidf.fit_transform(subtrain_texts)
+    # Augment sub-train and full train splits only; test and validation sets remain strictly clean/held-out
+    aug_subtrain_texts, y_subtrain_aug = load_augmented_training_data(
+        train_texts=subtrain_texts,
+        train_labels=y_subtrain,
+        augmentation_path="data/smishing_augmentation.tsv",
+    )
+    aug_train_texts, y_train_aug = load_augmented_training_data(
+        train_texts=train_texts,
+        train_labels=y_train,
+        augmentation_path="data/smishing_augmentation.tsv",
+    )
+
+    # Fit TF-IDF (unigrams + bigrams) on sub-train only
+    val_tfidf = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
+    X_subtrain = val_tfidf.fit_transform(aug_subtrain_texts)
     X_val = val_tfidf.transform(val_texts)
 
     val_models = get_model_instances()
     val_metrics: Dict[str, Dict[str, Any]] = {}
+    optimal_thresholds: Dict[str, float] = {}
 
     for key, model in val_models.items():
-        model.fit(X_subtrain, y_subtrain)
+        model.fit(X_subtrain, y_subtrain_aug)
         preds = model.predict(X_val)
         probs = model.predict_proba(X_val)[:, 1]
         m = compute_classification_metrics(y_val, preds, probs)
         m["model_name"] = model.name
+
+        if key != "majority_baseline":
+            opt_t, opt_f1 = find_optimal_threshold(y_val, probs)
+            optimal_thresholds[key] = opt_t
+            m["optimal_threshold"] = opt_t
+            m["optimal_validation_f1"] = opt_f1
+        else:
+            optimal_thresholds[key] = 0.50
+            m["optimal_threshold"] = 0.50
+            m["optimal_validation_f1"] = m["f1"]
+
         val_metrics[key] = m
 
-    # Select best candidate model (BernoulliNBReportStyle excluded from selection per instructions)
+    # Select best candidate model by validation F1 score
     candidate_keys = ["majority_baseline", "multinomial_nb", "bernoulli_nb", "logistic_regression"]
     best_key = max(candidate_keys, key=lambda k: val_metrics[k]["f1"])
     best_val_f1 = val_metrics[best_key]["f1"]
     best_model_name = val_metrics[best_key]["model_name"]
+    best_optimal_threshold = optimal_thresholds.get(best_key, 0.50)
 
-    # 4. Refit TF-IDF and all models on the full 4,458 training messages
-    full_tfidf = TfidfVectorizer(max_features=5000)
-    X_train_full = full_tfidf.fit_transform(train_texts)
+    # 4. Refit TF-IDF and all models on the full augmented training messages
+    full_tfidf = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
+    X_train_full = full_tfidf.fit_transform(aug_train_texts)
     X_test_full = full_tfidf.transform(test_texts)
 
     full_models = get_model_instances()
     test_metrics: Dict[str, Dict[str, Any]] = {}
+    test_metrics_opt: Dict[str, Dict[str, Any]] = {}
 
     for key, model in full_models.items():
-        model.fit(X_train_full, y_train)
+        model.fit(X_train_full, y_train_aug)
         preds = model.predict(X_test_full)
         probs = model.predict_proba(X_test_full)[:, 1]
         m = compute_classification_metrics(y_test, preds, probs)
         m["model_name"] = model.name
         test_metrics[key] = m
 
+        opt_t = optimal_thresholds.get(key, 0.50)
+        preds_opt = (probs >= opt_t).astype(int)
+        m_opt = compute_classification_metrics(y_test, preds_opt, probs)
+        m_opt["model_name"] = model.name
+        m_opt["threshold"] = opt_t
+        test_metrics_opt[key] = m_opt
+
         # Save confusion matrix plot
         cm_arr = np.array(m["confusion_matrix"])
         plot_confusion_matrix(cm_arr, model.name, reports_path / f"confusion_matrix_{key}.png")
 
-    # 5. Save best model and full TF-IDF to artifacts/
+    # 5. Save best model, individual models, and full TF-IDF to artifacts/
     full_tfidf.save(artifacts_path / "tfidf.npz")
     best_model = full_models[best_key]
 
@@ -158,17 +218,24 @@ def train_and_evaluate(
     best_model_path = artifacts_path / f"best_model{ext}"
     best_model.save(best_model_path)
 
-    # Also save Logistic Regression specifically for inspection and sample runs
-    full_models["logistic_regression"].save(artifacts_path / "logistic_regression.npz")
+    # Save all trained candidate models for evaluation and CLI inspection
+    for key, model in full_models.items():
+        m_ext = ".json" if isinstance(model, MajorityBaseline) else ".npz"
+        model.save(artifacts_path / f"{key}{m_ext}")
 
     best_metadata = {
         "best_model_key": best_key,
         "best_model_name": best_model_name,
         "selected_by": "validation_f1",
         "validation_f1": float(best_val_f1),
+        "optimal_threshold": float(best_optimal_threshold),
         "test_metrics": test_metrics[best_key],
-        "n_train": len(train_idx),
+        "test_metrics_optimal_threshold": test_metrics_opt[best_key],
+        "n_train_original": len(train_idx),
+        "n_train_augmented": len(aug_train_texts),
         "n_test": len(test_idx),
+        "ngram_range": [1, 2],
+        "max_features": 5000,
         "random_state": random_state,
     }
     with open(artifacts_path / "model_metadata.json", "w", encoding="utf-8") as f:
@@ -178,13 +245,18 @@ def train_and_evaluate(
     report_data = {
         "split_summary": {
             "n_train": len(train_idx),
+            "n_train_original": len(train_idx),
+            "n_train_augmented": len(aug_train_texts),
             "n_test": len(test_idx),
             "test_ham": int(np.sum(y_test == 0)),
             "test_spam": int(np.sum(y_test == 1)),
         },
         "best_model": best_model_name,
+        "best_model_key": best_key,
+        "optimal_threshold": float(best_optimal_threshold),
         "validation_metrics": val_metrics,
         "test_metrics": test_metrics,
+        "test_metrics_optimal_threshold": test_metrics_opt,
     }
     with open(reports_path / "metrics.json", "w", encoding="utf-8") as f:
         json.dump(report_data, f, indent=2)
@@ -202,34 +274,37 @@ def generate_markdown_report(report_data: Dict[str, Any], output_path: Path) -> 
     """Write comprehensive markdown evaluation report."""
     val_m = report_data["validation_metrics"]
     test_m = report_data["test_metrics"]
+    test_opt_m = report_data.get("test_metrics_optimal_threshold", {})
     split = report_data["split_summary"]
 
     lines = [
         "# Spam SMS Detection - Model Benchmark Report",
         "",
         "## Dataset Split Summary",
-        f"- **Total Training Samples**: {split['n_train']} (Stratified 80%)",
-        f"- **Total Test Samples**: {split['n_test']} (Stratified 20%)",
+        f"- **Base Training Samples**: {split['n_train_original']} (Stratified 80%)",
+        f"- **Augmented Training Samples**: {split['n_train_augmented']} (Modern smishing & legit bank/OTP samples added only to train)",
+        f"- **Unseen Held-out Test Samples**: {split['n_test']} (Stratified 20% untouched)",
         f"- **Test Class Distribution**: {split['test_ham']} Ham / {split['test_spam']} Spam",
         "",
         "## Validation Set Comparison (Model Selection)",
         "*Models trained on 80% sub-train; evaluated on 20% validation split carved from train.*",
         "",
-        "| Model | Accuracy | Precision | Recall | F1 Score | ROC-AUC |",
-        "| :--- | :---: | :---: | :---: | :---: | :---: |",
+        "| Model | Accuracy | Precision | Recall | F1 Score | ROC-AUC | Optimal Threshold |",
+        "| :--- | :---: | :---: | :---: | :---: | :---: | :---: |",
     ]
     for key, m in val_m.items():
+        opt_t = m.get("optimal_threshold", 0.50)
         lines.append(
             f"| **{m['model_name']}** | {m['accuracy']*100:.2f}% | {m['precision']*100:.2f}% | "
-            f"{m['recall']*100:.2f}% | {m['f1']:.4f} | {m['roc_auc']:.4f} |"
+            f"{m['recall']*100:.2f}% | {m['f1']:.4f} | {m['roc_auc']:.4f} | {opt_t:.2f} |"
         )
 
     lines.extend([
         "",
-        f"**Selected Best Model**: **{report_data['best_model']}** (highest validation F1).",
+        f"**Selected Best Model**: **{report_data['best_model']}** (highest validation F1: {val_m[report_data['best_model_key']]['f1']:.4f}, optimal threshold: {report_data.get('optimal_threshold', 0.50):.2f}).",
         "",
-        "## Final Test Set Evaluation",
-        "*Refitted on full 4,458 training samples; evaluated on 1,114 unseen test samples.*",
+        "## Final Test Set Evaluation (Default Threshold = 0.50)",
+        f"*Refitted on full {split['n_train_augmented']} training samples; evaluated on {split['n_test']} unseen test samples.*",
         "",
         "| Model | Accuracy | Precision | Recall | F1 Score | ROC-AUC | Confusion Matrix (TN, FP, FN, TP) |",
         "| :--- | :---: | :---: | :---: | :---: | :---: | :---: |",
@@ -242,6 +317,24 @@ def generate_markdown_report(report_data: Dict[str, Any], output_path: Path) -> 
             f"{m['recall']*100:.2f}% | {m['f1']:.4f} | {m['roc_auc']:.4f} | {cm_str} |"
         )
 
+    if test_opt_m:
+        lines.extend([
+            "",
+            "## Final Test Set Evaluation (Validation-Tuned Optimal Threshold)",
+            "*Evaluated using the threshold selected via validation set optimization.*",
+            "",
+            "| Model | Threshold | Accuracy | Precision | Recall | F1 Score | Confusion Matrix (TN, FP, FN, TP) |",
+            "| :--- | :---: | :---: | :---: | :---: | :---: | :---: |",
+        ])
+        for key, m in test_opt_m.items():
+            cm = m["confusion_matrix"]
+            cm_str = f"[{cm[0][0]}, {cm[0][1]}, {cm[1][0]}, {cm[1][1]}]"
+            th = m.get("threshold", 0.50)
+            lines.append(
+                f"| **{m['model_name']}** | {th:.2f} | {m['accuracy']*100:.2f}% | {m['precision']*100:.2f}% | "
+                f"{m['recall']*100:.2f}% | {m['f1']:.4f} | {cm_str} |"
+            )
+
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -249,14 +342,16 @@ def print_tables(report_data: Dict[str, Any], best_key: str) -> None:
     """Print clean comparison tables to terminal."""
     val_m = report_data["validation_metrics"]
     test_m = report_data["test_metrics"]
+    test_opt_m = report_data.get("test_metrics_optimal_threshold", {})
     split = report_data["split_summary"]
 
+    n_aug = split["n_train_augmented"] - split["n_train_original"]
     print("\n" + "=" * 78)
     print("                    SPAM SMS DETECTION BENCHMARK REPORT")
     print("=" * 78)
-    print(f"Split: {split['n_train']} Train / {split['n_test']} Test ({split['test_ham']} Ham, {split['test_spam']} Spam in Test)")
+    print(f"Split: {split['n_train_augmented']} Train ({split['n_train_original']} base + {n_aug} aug) / {split['n_test']} Test ({split['test_ham']} Ham, {split['test_spam']} Spam in Test)")
     print("-" * 78)
-    print("1. VALIDATION SET RESULTS (Model Selection on Train Split)")
+    print("1. VALIDATION SET RESULTS (Model Selection on Sub-Train Split)")
     print("-" * 78)
     print(f"{'Model':<26} {'Accuracy':<10} {'Precision':<11} {'Recall':<10} {'F1':<9} {'ROC-AUC':<9}")
     print("-" * 78)
@@ -270,10 +365,10 @@ def print_tables(report_data: Dict[str, Any], best_key: str) -> None:
             f"{m['f1']:>8.4f} "
             f"{m['roc_auc']:>8.4f}"
         )
-    print(f"\n* Best model selected by validation F1: {report_data['best_model']}")
+    print(f"\n* Best model selected by validation F1: {report_data['best_model']} (Optimal threshold: {report_data.get('optimal_threshold', 0.50):.2f})")
 
     print("\n" + "-" * 78)
-    print("2. FINAL TEST SET EVALUATION (Refitted on Full 4,458 Train Messages)")
+    print("2. FINAL TEST SET EVALUATION (Unseen 1,114 Test Messages @ threshold=0.50)")
     print("-" * 78)
     print(f"{'Model':<26} {'Accuracy':<10} {'Precision':<11} {'Recall':<10} {'F1':<9} {'ROC-AUC':<9}")
     print("-" * 78)

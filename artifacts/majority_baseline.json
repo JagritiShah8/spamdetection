@@ -1,0 +1,8 @@
+{
+  "model_type": "MajorityBaseline",
+  "majority_class": 0,
+  "class_priors": [
+    0.8610312015932728,
+    0.13896879840672716
+  ]
+}

@@ -8,8 +8,14 @@ Implemented from scratch with NumPy and Pandas (no scikit-learn).
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict
+
+# Ensure src is in sys.path for direct execution or Streamlit Cloud deployments
+src_path = str(Path(__file__).resolve().parent / "src")
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
 
 import streamlit as st
 
@@ -32,14 +38,6 @@ st.set_page_config(
 # Apply Dark Navy & Cyan custom theme
 apply_custom_theme()
 
-# Initialize session state for prediction history
-if "prediction_history" not in st.session_state:
-    st.session_state["prediction_history"] = []
-
-if "active_threshold" not in st.session_state:
-    st.session_state["active_threshold"] = 0.50
-
-
 @st.cache_data
 def load_app_metadata() -> Dict[str, Any]:
     """Load model metadata and test performance metrics."""
@@ -51,6 +49,13 @@ def load_app_metadata() -> Dict[str, Any]:
 
 
 meta = load_app_metadata()
+
+# Initialize session state for prediction history and active threshold
+if "prediction_history" not in st.session_state:
+    st.session_state["prediction_history"] = []
+
+if "active_threshold" not in st.session_state:
+    st.session_state["active_threshold"] = float(meta.get("optimal_threshold", 0.50))
 active_model = meta.get("best_model_name", "Logistic Regression")
 test_m = meta.get("test_metrics", {})
 
@@ -105,7 +110,7 @@ with st.sidebar:
         "- **Dataset**: UCI SMS Spam Collection (5,572 items)\n"
         "- **Split**: 80/20 Stratified (4,458 Train / 1,114 Test)\n"
         "- **Python**: 3.12.10 (Windows 11 Compatible)\n"
-        "- **Tests**: 65 Automated Pytest Test Cases"
+        "- **Tests**: 82 Automated Pytest Test Cases"
     )
     st.caption("Developed for B.Tech AIML Capstone Defense.")
 

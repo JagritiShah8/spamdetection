@@ -105,10 +105,14 @@ def roc_auc_score(y_true: np.ndarray, y_score: np.ndarray) -> float:
     """Compute Area Under the Receiver Operating Characteristic Curve (ROC-AUC).
 
     Uses trapezoidal integration over sorted distinct score thresholds.
+    Compatible with both NumPy < 2.0 (np.trapz) and NumPy >= 2.0 (np.trapezoid).
     """
     fpr, tpr, _ = roc_curve(y_true, y_score)
     # Trapezoidal integration: area = sum of (fpr[i] - fpr[i-1]) * (tpr[i] + tpr[i-1]) / 2
-    return float(np.trapz(tpr, fpr))
+    trapezoid_func = getattr(np, "trapezoid", getattr(np, "trapz", None))
+    if trapezoid_func is not None:
+        return float(trapezoid_func(tpr, fpr))
+    return float(np.sum((fpr[1:] - fpr[:-1]) * (tpr[1:] + tpr[:-1]) / 2.0))
 
 
 def compute_classification_metrics(

@@ -300,24 +300,33 @@ def explain_prediction(
     safe_msg = message[:50000]
     tokens = preprocess_text(safe_msg)
     token_counts = Counter(tokens)
-    known_tokens = [t for t in set(tokens) if t in predictor.vectorizer.vocabulary_]
 
-    # Calculate token contribution dictionary
-    token_contributions: Dict[str, float] = {}
-    if known_tokens:
+    # Extract terms (unigrams + bigrams)
+    terms = (
+        predictor.vectorizer._extract_terms(tokens)
+        if hasattr(predictor.vectorizer, "_extract_terms")
+        else tokens
+    )
+    term_counts = Counter(terms)
+    known_terms = [t for t in set(terms) if t in predictor.vectorizer.vocabulary_]
+
+    # Calculate term contribution dictionary
+    term_contributions: Dict[str, float] = {}
+    if known_terms:
         X = predictor.vectorizer.transform([safe_msg])
         contrib_vec = predictor.model.get_word_contributions(X[0])
-        for token in known_tokens:
-            col_idx = predictor.vectorizer.vocabulary_[token]
-            token_contributions[token] = float(contrib_vec[col_idx])
+        for term in known_terms:
+            col_idx = predictor.vectorizer.vocabulary_[term]
+            term_contributions[term] = float(contrib_vec[col_idx])
 
-    # 3. Categorize words
+    # 3. Categorize words and n-grams
     spam_supporting: List[Dict[str, Any]] = []
     ham_supporting: List[Dict[str, Any]] = []
     neutral_words: List[str] = []
 
+    # First evaluate unigram tokens
     for token, count in token_counts.items():
-        contrib = token_contributions.get(token, 0.0)
+        contrib = term_contributions.get(token, 0.0)
         item = {
             "word": token,
             "contribution": round(contrib, 4),
@@ -331,6 +340,22 @@ def explain_prediction(
         else:
             neutral_words.append(token)
 
+    # Include known bigrams with non-zero contributions
+    for term, count in term_counts.items():
+        if " " in term and term in term_contributions:
+            contrib = term_contributions[term]
+            if contrib != 0.0:
+                item = {
+                    "word": term,
+                    "contribution": round(contrib, 4),
+                    "frequency": count,
+                    "category": "spam" if contrib > 0.0 else "ham",
+                }
+                if contrib > 0.0:
+                    spam_supporting.append(item)
+                else:
+                    ham_supporting.append(item)
+
     # Sort spam words descending (strongest evidence for spam first)
     spam_supporting.sort(key=lambda x: -x["contribution"])
     # Sort ham words ascending (most negative contribution first)
@@ -340,7 +365,7 @@ def explain_prediction(
     all_contributing.sort(key=lambda x: -abs(x["contribution"]))
 
     # 4. Text segmentation & safe HTML highlighting
-    text_segments = build_text_segments(message, token_contributions)
+    text_segments = build_text_segments(message, term_contributions)
     highlighted_html = render_highlighted_html(text_segments)
 
     # 5. Human-readable explanation text

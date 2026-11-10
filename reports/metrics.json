@@ -1,11 +1,15 @@
 {
   "split_summary": {
     "n_train": 4458,
+    "n_train_original": 4458,
+    "n_train_augmented": 4519,
     "n_test": 1114,
     "test_ham": 965,
     "test_spam": 149
   },
   "best_model": "Logistic Regression",
+  "best_model_key": "logistic_regression",
+  "optimal_threshold": 0.6,
   "validation_metrics": {
     "majority_baseline": {
       "accuracy": 0.8654708520179372,
@@ -23,79 +27,89 @@
           0
         ]
       ],
-      "model_name": "Majority Baseline"
+      "model_name": "Majority Baseline",
+      "optimal_threshold": 0.5,
+      "optimal_validation_f1": 0.0
     },
     "multinomial_nb": {
-      "accuracy": 0.952914798206278,
+      "accuracy": 0.9708520179372198,
       "precision": 1.0,
-      "recall": 0.65,
-      "f1": 0.787878787878788,
-      "roc_auc": 0.9884499136442141,
+      "recall": 0.7833333333333333,
+      "f1": 0.8785046728971964,
+      "roc_auc": 0.9884607081174439,
       "confusion_matrix": [
         [
           772,
           0
         ],
         [
-          42,
-          78
+          26,
+          94
         ]
       ],
-      "model_name": "Multinomial Naive Bayes"
+      "model_name": "Multinomial Naive Bayes",
+      "optimal_threshold": 0.3,
+      "optimal_validation_f1": 0.9385964912280701
     },
     "bernoulli_nb": {
-      "accuracy": 0.9719730941704036,
-      "precision": 0.9896907216494846,
-      "recall": 0.8,
-      "f1": 0.8847926267281107,
-      "roc_auc": 0.998931347150259,
+      "accuracy": 0.9820627802690582,
+      "precision": 1.0,
+      "recall": 0.8666666666666667,
+      "f1": 0.9285714285714286,
+      "roc_auc": 0.9982944732297063,
       "confusion_matrix": [
         [
-          771,
-          1
+          772,
+          0
         ],
         [
-          24,
-          96
+          16,
+          104
         ]
       ],
-      "model_name": "Bernoulli Naive Bayes"
+      "model_name": "Bernoulli Naive Bayes",
+      "optimal_threshold": 0.2,
+      "optimal_validation_f1": 0.9285714285714286
     },
     "bernoulli_nb_report_style": {
-      "accuracy": 0.8699551569506726,
-      "precision": 0.5084745762711864,
+      "accuracy": 0.9024663677130045,
+      "precision": 0.5797101449275363,
       "recall": 1.0,
-      "f1": 0.6741573033707865,
-      "roc_auc": 0.9989097582037997,
+      "f1": 0.7339449541284404,
+      "roc_auc": 0.9982405008635579,
       "confusion_matrix": [
         [
-          656,
-          116
+          685,
+          87
         ],
         [
           0,
           120
         ]
       ],
-      "model_name": "Bernoulli NB (Report-Style)"
+      "model_name": "Bernoulli NB (Report-Style)",
+      "optimal_threshold": 0.8,
+      "optimal_validation_f1": 0.8053691275167786
     },
     "logistic_regression": {
-      "accuracy": 0.9753363228699552,
-      "precision": 0.9083333333333333,
-      "recall": 0.9083333333333333,
-      "f1": 0.9083333333333333,
-      "roc_auc": 0.991731433506045,
+      "accuracy": 0.9887892376681614,
+      "precision": 0.9661016949152542,
+      "recall": 0.95,
+      "f1": 0.957983193277311,
+      "roc_auc": 0.9971610535405873,
       "confusion_matrix": [
         [
-          761,
-          11
+          768,
+          4
         ],
         [
-          11,
-          109
+          6,
+          114
         ]
       ],
-      "model_name": "Logistic Regression"
+      "model_name": "Logistic Regression",
+      "optimal_threshold": 0.6,
+      "optimal_validation_f1": 0.9620253164556962
     }
   },
   "test_metrics": {
@@ -118,76 +132,173 @@
       "model_name": "Majority Baseline"
     },
     "multinomial_nb": {
-      "accuracy": 0.9730700179533214,
+      "accuracy": 0.9766606822262118,
+      "precision": 0.984251968503937,
+      "recall": 0.8389261744966443,
+      "f1": 0.9057971014492754,
+      "roc_auc": 0.9854817957366901,
+      "confusion_matrix": [
+        [
+          963,
+          2
+        ],
+        [
+          24,
+          125
+        ]
+      ],
+      "model_name": "Multinomial Naive Bayes"
+    },
+    "bernoulli_nb": {
+      "accuracy": 0.9865350089766607,
       "precision": 1.0,
-      "recall": 0.7986577181208053,
-      "f1": 0.8880597014925372,
-      "roc_auc": 0.985217512257885,
+      "recall": 0.8993288590604027,
+      "f1": 0.9469964664310955,
+      "roc_auc": 0.9940918732830267,
       "confusion_matrix": [
         [
           965,
           0
         ],
         [
-          30,
-          119
-        ]
-      ],
-      "model_name": "Multinomial Naive Bayes"
-    },
-    "bernoulli_nb": {
-      "accuracy": 0.9829443447037702,
-      "precision": 0.9924242424242424,
-      "recall": 0.8791946308724832,
-      "f1": 0.9323843416370107,
-      "roc_auc": 0.9933546614737281,
-      "confusion_matrix": [
-        [
-          964,
-          1
-        ],
-        [
-          18,
-          131
+          15,
+          134
         ]
       ],
       "model_name": "Bernoulli Naive Bayes"
     },
     "bernoulli_nb_report_style": {
-      "accuracy": 0.8922800718132855,
-      "precision": 0.5547169811320755,
-      "recall": 0.9865771812080537,
-      "f1": 0.7101449275362319,
-      "roc_auc": 0.9936954480648189,
+      "accuracy": 0.90754039497307,
+      "precision": 0.5934959349593496,
+      "recall": 0.9798657718120806,
+      "f1": 0.739240506329114,
+      "roc_auc": 0.9942866084779357,
       "confusion_matrix": [
         [
-          847,
-          118
+          865,
+          100
         ],
         [
-          2,
-          147
+          3,
+          146
         ]
       ],
       "model_name": "Bernoulli NB (Report-Style)"
     },
     "logistic_regression": {
-      "accuracy": 0.9748653500897666,
-      "precision": 0.8757763975155279,
-      "recall": 0.9463087248322147,
-      "f1": 0.9096774193548388,
-      "roc_auc": 0.988298501234482,
+      "accuracy": 0.9892280071813285,
+      "precision": 0.9659863945578231,
+      "recall": 0.9530201342281879,
+      "f1": 0.9594594594594594,
+      "roc_auc": 0.9940779636262476,
       "confusion_matrix": [
         [
-          945,
-          20
+          960,
+          5
         ],
         [
-          8,
-          141
+          7,
+          142
         ]
       ],
       "model_name": "Logistic Regression"
+    }
+  },
+  "test_metrics_optimal_threshold": {
+    "majority_baseline": {
+      "accuracy": 0.8662477558348295,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "roc_auc": 0.5,
+      "confusion_matrix": [
+        [
+          965,
+          0
+        ],
+        [
+          149,
+          0
+        ]
+      ],
+      "model_name": "Majority Baseline",
+      "threshold": 0.5
+    },
+    "multinomial_nb": {
+      "accuracy": 0.9865350089766607,
+      "precision": 0.9855072463768116,
+      "recall": 0.912751677852349,
+      "f1": 0.9477351916376308,
+      "roc_auc": 0.9854817957366901,
+      "confusion_matrix": [
+        [
+          963,
+          2
+        ],
+        [
+          13,
+          136
+        ]
+      ],
+      "model_name": "Multinomial Naive Bayes",
+      "threshold": 0.3
+    },
+    "bernoulli_nb": {
+      "accuracy": 0.9865350089766607,
+      "precision": 1.0,
+      "recall": 0.8993288590604027,
+      "f1": 0.9469964664310955,
+      "roc_auc": 0.9940918732830267,
+      "confusion_matrix": [
+        [
+          965,
+          0
+        ],
+        [
+          15,
+          134
+        ]
+      ],
+      "model_name": "Bernoulli Naive Bayes",
+      "threshold": 0.2
+    },
+    "bernoulli_nb_report_style": {
+      "accuracy": 0.9434470377019749,
+      "precision": 0.7128712871287128,
+      "recall": 0.9664429530201343,
+      "f1": 0.8205128205128205,
+      "roc_auc": 0.9942866084779357,
+      "confusion_matrix": [
+        [
+          907,
+          58
+        ],
+        [
+          5,
+          144
+        ]
+      ],
+      "model_name": "Bernoulli NB (Report-Style)",
+      "threshold": 0.8
+    },
+    "logistic_regression": {
+      "accuracy": 0.9865350089766607,
+      "precision": 0.9785714285714285,
+      "recall": 0.9194630872483222,
+      "f1": 0.9480968858131488,
+      "roc_auc": 0.9940779636262476,
+      "confusion_matrix": [
+        [
+          962,
+          3
+        ],
+        [
+          12,
+          137
+        ]
+      ],
+      "model_name": "Logistic Regression",
+      "threshold": 0.6
     }
   }
 }

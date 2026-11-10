@@ -60,9 +60,10 @@ def stratified_split(
         (train_indices, test_indices) as 1D numpy integer arrays.
     """
     labels_arr = np.asarray(labels)
-    # Convert 'ham'/'spam' strings to 0/1 if needed
+    # Convert 'ham'/'spam' strings to 0/1 if needed (case-insensitive & stripped)
     if labels_arr.dtype.kind in {"U", "O", "S"}:
-        y = (labels_arr == "spam").astype(int)
+        str_labels = np.char.lower(np.char.strip(labels_arr.astype(str)))
+        y = (str_labels == "spam").astype(int)
     else:
         y = labels_arr.astype(int)
 
@@ -84,6 +85,28 @@ def stratified_split(
     return train_indices, test_indices
 
 
+def load_augmented_training_data(
+    train_texts: list[str],
+    train_labels: np.ndarray,
+    augmentation_path: str | Path = "data/smishing_augmentation.tsv",
+) -> tuple[list[str], np.ndarray]:
+    """Augment training partition with modern smishing and legitimate messages.
+
+    Strictly preserves test data separation with zero leakage.
+    """
+    aug_file = Path(augmentation_path)
+    if not aug_file.exists():
+        return train_texts, train_labels
+
+    df_aug = pd.read_csv(aug_file, sep="\t", header=0)
+    aug_texts = df_aug["text"].astype(str).tolist()
+    aug_labels = (df_aug["label"].astype(str).str.strip().str.lower() == "spam").astype(int).values
+
+    combined_texts = list(train_texts) + aug_texts
+    combined_labels = np.concatenate([train_labels, aug_labels])
+    return combined_texts, combined_labels
+
+
 # Re-export EDA functions for convenience
 from spamdetector.eda import (
     compute_class_distribution,
@@ -97,6 +120,7 @@ from spamdetector.eda import (
 __all__ = [
     "load_sms_dataset",
     "stratified_split",
+    "load_augmented_training_data",
     "compute_class_distribution",
     "compute_length_statistics",
     "compute_word_frequencies",

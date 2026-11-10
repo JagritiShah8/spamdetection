@@ -26,3 +26,27 @@ def test_stratified_split_sizes():
 
     assert ham_train_count == 3860, f"Expected 3860 ham in train, got {ham_train_count}"
     assert spam_train_count == 598, f"Expected 598 spam in train, got {spam_train_count}"
+
+
+def test_stratified_split_mixed_case():
+    import numpy as np
+    labels = np.array(["ham", "SPAM", "Ham", "spam", "HAM", "Spam", " ham ", " spam "])
+    train_idx, test_idx = stratified_split(labels, test_ratio=0.5, random_state=42)
+    assert len(train_idx) == 4
+    assert len(test_idx) == 4
+    # Ensure indices are valid and disjoint
+    assert set(train_idx).isdisjoint(set(test_idx))
+    assert len(set(train_idx) | set(test_idx)) == 8
+
+
+def test_load_augmented_training_data():
+    from spamdetector.dataset import load_augmented_training_data
+    import numpy as np
+    train_texts = ["hello there", "free cash prize"]
+    train_labels = np.array([0, 1])
+    aug_texts, aug_labels = load_augmented_training_data(train_texts, train_labels)
+    import pandas as pd
+    aug_df = pd.read_csv("data/smishing_augmentation.tsv", sep="\t")
+    n_aug = len(aug_df)
+    assert len(aug_texts) == len(train_texts) + n_aug
+    assert len(aug_labels) == len(train_labels) + n_aug

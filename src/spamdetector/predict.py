@@ -129,11 +129,12 @@ class Predictor:
         assert self.vectorizer is not None
         assert self.model is not None
 
-        # Check for known vocabulary tokens
-        known_tokens = [t for t in set(tokens) if t in self.vectorizer.vocabulary_]
+        # Check for known vocabulary tokens and n-grams
+        terms = self.vectorizer._extract_terms(tokens) if hasattr(self.vectorizer, "_extract_terms") else tokens
+        known_terms = [t for t in set(terms) if t in self.vectorizer.vocabulary_]
 
         # Edge Case 2: No known vocabulary tokens -> predict ham with low confidence
-        if not known_tokens:
+        if not known_terms:
             return _make_fallback_result()
 
         # Vectorize input
@@ -157,10 +158,10 @@ class Predictor:
         contrib_vec = self.model.get_word_contributions(X[0])
         word_contribs: List[Tuple[str, float]] = []
 
-        for token in sorted(known_tokens):
-            col_idx = self.vectorizer.vocabulary_[token]
+        for term in sorted(known_terms):
+            col_idx = self.vectorizer.vocabulary_[term]
             weight = float(contrib_vec[col_idx])
-            word_contribs.append((token, round(weight, 4)))
+            word_contribs.append((term, round(weight, 4)))
 
         # Sort by contribution descending (strongest spam contributors first)
         word_contribs.sort(key=lambda item: -item[1])
@@ -206,7 +207,7 @@ class Predictor:
         # Identify messages that need model evaluation vs fast fallbacks
         valid_indices: List[int] = []
         valid_texts: List[str] = []
-        valid_known_tokens: List[List[str]] = []
+        valid_known_terms: List[List[str]] = []
 
         for idx, msg in enumerate(messages_list):
             if not isinstance(msg, str) or not msg.strip():
@@ -219,21 +220,22 @@ class Predictor:
                 results[idx] = _make_fallback_result()
                 continue
 
-            known_tokens = [t for t in set(tokens) if t in self.vectorizer.vocabulary_]
-            if not known_tokens:
+            terms = self.vectorizer._extract_terms(tokens) if hasattr(self.vectorizer, "_extract_terms") else tokens
+            known_terms = [t for t in set(terms) if t in self.vectorizer.vocabulary_]
+            if not known_terms:
                 results[idx] = _make_fallback_result()
                 continue
 
             valid_indices.append(idx)
             valid_texts.append(safe_msg)
-            valid_known_tokens.append(known_tokens)
+            valid_known_terms.append(known_terms)
 
         # Batch vectorization and model prediction for all valid messages
         if valid_indices:
             X_valid = self.vectorizer.transform(valid_texts)
             probs_valid = self.model.predict_proba(X_valid)
 
-            for k, (orig_idx, known_tokens) in enumerate(zip(valid_indices, valid_known_tokens)):
+            for k, (orig_idx, known_terms) in enumerate(zip(valid_indices, valid_known_terms)):
                 spam_prob = float(probs_valid[k, 1])
                 label = "SPAM" if spam_prob >= th else "HAM"
 
@@ -244,10 +246,10 @@ class Predictor:
 
                 contrib_vec = self.model.get_word_contributions(X_valid[k])
                 word_contribs: List[Tuple[str, float]] = []
-                for token in sorted(known_tokens):
-                    col_idx = self.vectorizer.vocabulary_[token]
+                for term in sorted(known_terms):
+                    col_idx = self.vectorizer.vocabulary_[term]
                     weight = float(contrib_vec[col_idx])
-                    word_contribs.append((token, round(weight, 4)))
+                    word_contribs.append((term, round(weight, 4)))
 
                 word_contribs.sort(key=lambda item: -item[1])
 

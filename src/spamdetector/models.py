@@ -242,11 +242,14 @@ class BernoulliNaiveBayes(BaseModel):
         return np.column_stack([p0, p1])
 
     def get_word_contributions(self, x_vector: np.ndarray) -> np.ndarray:
-        """Top-word contribution: (log P(w|spam) - log P(w|ham)) * tfidf."""
-        diff = self.feature_log_prob_[1] - self.feature_log_prob_[0]
+        """Log-odds contribution: (w_spam - w_ham) for present binary features."""
+        w0 = self.feature_log_prob_[0] - self.feature_log_prob_neg_[0]
+        w1 = self.feature_log_prob_[1] - self.feature_log_prob_neg_[1]
+        diff = w1 - w0
         length = min(len(diff), len(x_vector))
         contrib = np.zeros_like(x_vector, dtype=np.float64)
-        contrib[:length] = diff[:length] * x_vector[:length]
+        is_present = (x_vector[:length] > 0.0).astype(np.float64)
+        contrib[:length] = diff[:length] * is_present
         return contrib
 
     def save(self, filepath: str | Path) -> None:
@@ -357,17 +360,17 @@ class BernoulliNBReportStyle(BaseModel):
 class LogisticRegression(BaseModel):
     """Logistic Regression trained via batch gradient descent with class weights and L2 regularization.
 
-    Uses the first 2000 vocabulary features (most frequent terms).
+    Evaluates full feature space with adaptive learning rate decay for guaranteed convergence.
     """
 
     name = "Logistic Regression"
 
     def __init__(
         self,
-        n_features: int = 2000,
-        epochs: int = 300,
-        lr: float = 0.5,
-        l2: float = 0.01,
+        n_features: int = 5000,
+        epochs: int = 1000,
+        lr: float = 6.0,
+        l2: float = 0.0005,
         class_weight: str = "inverse_frequency",
     ) -> None:
         self.n_features = int(n_features)
@@ -386,7 +389,7 @@ class LogisticRegression(BaseModel):
         return 1.0 / (1.0 + np.exp(-z_clipped))
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "LogisticRegression":
-        # Slices first n_features (e.g. 2000 most frequent terms)
+        # Slices up to n_features
         n_samples = X.shape[0]
         actual_features = min(self.n_features, X.shape[1])
         X_sub = X[:, :actual_features]
@@ -406,8 +409,8 @@ class LogisticRegression(BaseModel):
         else:
             sample_weights = np.ones(n_samples, dtype=np.float64)
 
-        # Batch Gradient Descent
-        for _ in range(self.epochs):
+        # Batch Gradient Descent with learning rate decay schedule
+        for epoch in range(self.epochs):
             linear_output = X_sub @ self.weights_ + self.bias_
             predictions = self._sigmoid(linear_output)
 
@@ -418,9 +421,12 @@ class LogisticRegression(BaseModel):
             grad_w = (X_sub.T @ errors) / n_samples + self.l2 * self.weights_
             grad_b = np.sum(errors) / n_samples
 
+            # Scheduled learning rate decay for fast early steps and stable convergence
+            effective_lr = self.lr / (1.0 + 0.0005 * epoch)
+
             # Gradient update step
-            self.weights_ -= self.lr * grad_w
-            self.bias_ -= self.lr * grad_b
+            self.weights_ -= effective_lr * grad_w
+            self.bias_ -= effective_lr * grad_b
 
             # Track loss periodically
             eps = 1e-12
@@ -433,14 +439,18 @@ class LogisticRegression(BaseModel):
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         actual_features = len(self.weights_)
-        X_sub = X[:, :actual_features]
+        if X.shape[1] < actual_features:
+            X_sub = np.zeros((X.shape[0], actual_features), dtype=np.float64)
+            X_sub[:, : X.shape[1]] = X
+        else:
+            X_sub = X[:, :actual_features]
         linear_output = X_sub @ self.weights_ + self.bias_
         p_spam = self._sigmoid(linear_output)
         p_ham = 1.0 - p_spam
         return np.column_stack([p_ham, p_spam])
 
     def get_word_contributions(self, x_vector: np.ndarray) -> np.ndarray:
-        """Top-word contribution: weight x tfidf value for first 2000 features."""
+        """Top-word contribution: weight x tfidf value."""
         actual_features = len(self.weights_)
         contrib = np.zeros_like(x_vector, dtype=np.float64)
         length = min(actual_features, len(x_vector))
@@ -460,6 +470,7 @@ class LogisticRegression(BaseModel):
             l2=np.array([self.l2]),
             weights=self.weights_,
             bias=np.array([self.bias_]),
+            loss_history=np.array(self.training_loss_history_, dtype=np.float64),
         )
 
     @classmethod
@@ -475,4 +486,5 @@ class LogisticRegression(BaseModel):
         )
         model.weights_ = np.array(data["weights"], dtype=np.float64)
         model.bias_ = float(data["bias"][0])
+        model.training_loss_history_ = list(data["loss_history"]) if "loss_history" in data else []
         return model

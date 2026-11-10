@@ -23,11 +23,8 @@ def test_default_threshold_behavior():
 
 def test_thresholds_modulation_02_05_08():
     """Verify that thresholds 0.2, 0.5, and 0.8 alter classification boundary appropriately."""
-    # Sample message with borderline probability (~0.412)
-    borderline_msg = (
-        "Hey, we are having a 20% discount celebration at our bakery today for friends & family! "
-        "Hope you can make it, let me know."
-    )
+    # Message with probability in [0.2, 0.5] (~0.299)
+    borderline_msg = "Reminder: your subscription will renew tomorrow unless cancelled."
 
     res_02 = predict(borderline_msg, threshold=0.2)
     res_05 = predict(borderline_msg, threshold=0.5)
@@ -48,16 +45,13 @@ def test_thresholds_modulation_02_05_08():
     assert res_05["label"] == expected_05
     assert res_08["label"] == expected_08
 
-    # Borderline message (~0.412) flips between threshold 0.2 and 0.5
+    # Borderline message flips between threshold 0.2 and 0.5
     assert res_02["label"] == "SPAM"
     assert res_05["label"] == "HAM"
     assert res_08["label"] == "HAM"
 
-    # High-probability spam (~0.601) flips between threshold 0.5 and 0.8
-    spam_msg = (
-        "WINNER!! As a valued customer you have been selected to receive a £900 prize reward! "
-        "Call 09061701461 to claim. Valid 12 hours only."
-    )
+    # Moderate-high spam message (~0.673) flips between threshold 0.5 and 0.8
+    spam_msg = "Urgent notice regarding your recent order delivery status update."
     spam_res_02 = predict(spam_msg, threshold=0.2)
     spam_res_05 = predict(spam_msg, threshold=0.5)
     spam_res_08 = predict(spam_msg, threshold=0.8)

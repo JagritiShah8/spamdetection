@@ -54,22 +54,31 @@ def compute_test_roc_curves() -> Dict[str, Dict[str, Any]]:
     fpr_lr, tpr_lr, _ = roc_curve(y_test, lr_probs)
     curves["Logistic Regression"] = {"fpr": fpr_lr, "tpr": tpr_lr, "color": "#38bdf8"}
 
-    # Refit test evaluation models on train set to get test ROC curves
-    train_texts = df["text"].iloc[train_idx].tolist()
-    y_train = y_all[train_idx]
-    X_train = tfidf.transform(train_texts)
+    # Load or refit test evaluation models to get test ROC curves
+    mnb_path = Path("artifacts/multinomial_nb.npz")
+    bnb_path = Path("artifacts/bernoulli_nb.npz")
+    rep_path = Path("artifacts/bernoulli_nb_report_style.npz")
 
-    mnb = MultinomialNaiveBayes(alpha=1.0).fit(X_train, y_train)
+    if mnb_path.exists() and bnb_path.exists() and rep_path.exists():
+        mnb = MultinomialNaiveBayes.load(mnb_path)
+        bnb = BernoulliNaiveBayes.load(bnb_path)
+        bnb_rep = BernoulliNBReportStyle.load(rep_path)
+    else:
+        train_texts = df["text"].iloc[train_idx].tolist()
+        y_train = y_all[train_idx]
+        X_train = tfidf.transform(train_texts)
+        mnb = MultinomialNaiveBayes(alpha=1.0).fit(X_train, y_train)
+        bnb = BernoulliNaiveBayes(alpha=1.0).fit(X_train, y_train)
+        bnb_rep = BernoulliNBReportStyle(alpha=1.0).fit(X_train, y_train)
+
     mnb_probs = mnb.predict_proba(X_test)[:, 1]
     fpr_mnb, tpr_mnb, _ = roc_curve(y_test, mnb_probs)
     curves["Multinomial NB"] = {"fpr": fpr_mnb, "tpr": tpr_mnb, "color": "#10b981"}
 
-    bnb = BernoulliNaiveBayes(alpha=1.0).fit(X_train, y_train)
     bnb_probs = bnb.predict_proba(X_test)[:, 1]
     fpr_bnb, tpr_bnb, _ = roc_curve(y_test, bnb_probs)
     curves["Bernoulli NB (Full)"] = {"fpr": fpr_bnb, "tpr": tpr_bnb, "color": "#a855f7"}
 
-    bnb_rep = BernoulliNBReportStyle(alpha=1.0).fit(X_train, y_train)
     bnb_rep_probs = bnb_rep.predict_proba(X_test)[:, 1]
     fpr_rep, tpr_rep, _ = roc_curve(y_test, bnb_rep_probs)
     curves["Bernoulli NB (Report-Style)"] = {"fpr": fpr_rep, "tpr": tpr_rep, "color": "#f43f5e"}
@@ -94,6 +103,8 @@ def render_models_tab() -> None:
     test_metrics = report_data["test_metrics"]
     val_metrics = report_data["validation_metrics"]
     best_model_name = report_data.get("best_model", "Logistic Regression")
+    best_model_key = report_data.get("best_model_key", "logistic_regression")
+    best_val_f1 = val_metrics.get(best_model_key, {}).get("f1", 0.9580)
 
     # 1. Model Selection Banner
     st.markdown("#### 1. Model Selection & Architecture Decision")
@@ -101,7 +112,7 @@ def render_models_tab() -> None:
         f"<div class='dark-card' style='border-left: 5px solid #38bdf8;'>"
         f"<div style='font-size: 1.15rem; font-weight: 700; color: #38bdf8;'>🥇 Production Model: {best_model_name}</div>"
         f"<div style='color: #cbd5e1; margin-top: 6px; line-height: 1.6;'>"
-        f"Selected based on highest <b>Validation F1-score (0.9083)</b> on an internal 80/20 validation split carved from the training data. "
+        f"Selected based on highest <b>Validation F1-score ({best_val_f1:.4f})</b> on an internal 80/20 validation split carved from the training data. "
         f"Evaluating candidate models on a separate validation partition ensures that model hyperparameters are never tuned against the final test set, "
         f"completely eliminating data snooping and test leakage."
         f"</div>"
@@ -179,7 +190,7 @@ def render_models_tab() -> None:
     with cm_col1:
         cm_path = Path(f"reports/confusion_matrix_{selected_key}.png")
         if cm_path.exists():
-            st.image(str(cm_path), caption=f"Confusion Matrix: {selected_choice}", use_column_width=True)
+            st.image(str(cm_path), caption=f"Confusion Matrix: {selected_choice}", use_container_width=True)
         else:
             st.warning("Confusion matrix plot file not found.")
 
@@ -245,7 +256,7 @@ def render_models_tab() -> None:
                 )
 
             # Diagonal chance baseline
-            ax.plot([0, 1], [0, 1], "k--", color="#64748b", linewidth=1.2, label="Random Guess (AUC = 0.50)")
+            ax.plot([0, 1], [0, 1], linestyle="--", color="#64748b", linewidth=1.2, label="Random Guess (AUC = 0.50)")
 
             ax.set_xlim([0.0, 1.0])
             ax.set_ylim([0.0, 1.05])

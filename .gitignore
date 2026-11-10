@@ -43,3 +43,6 @@ data/*.rar
 
 # Generated Python package metadata
 *.egg-info/
+
+# Local backups
+backups/

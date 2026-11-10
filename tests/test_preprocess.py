@@ -54,3 +54,21 @@ def test_single_function_consistency():
     assert t1 == t2
     assert "urgent" in t1
     assert "membership" in t1
+
+
+def test_url_and_shortener_preservation():
+    tokens = preprocess_text("Claim prize at http://bit.ly/free-gift now")
+    assert "url_link" in tokens
+    assert "url_shortener" in tokens
+    assert "free" in tokens
+    assert "gift" in tokens
+    # Ensure 'bit' is NOT emitted as a loose token
+    assert "bit" not in tokens
+
+
+def test_currency_and_phone_normalization():
+    tokens = preprocess_text("Won £1000 cash! Call 09061743811 now!!")
+    assert "currency_symbol" in tokens
+    assert "1000" in tokens
+    assert "phone_number" in tokens
+    assert "urgent_punct" in tokens

@@ -2,26 +2,52 @@
   "best_model_key": "logistic_regression",
   "best_model_name": "Logistic Regression",
   "selected_by": "validation_f1",
-  "validation_f1": 0.9083333333333333,
+  "validation_f1": 0.957983193277311,
+  "optimal_threshold": 0.6,
   "test_metrics": {
-    "accuracy": 0.9748653500897666,
-    "precision": 0.8757763975155279,
-    "recall": 0.9463087248322147,
-    "f1": 0.9096774193548388,
-    "roc_auc": 0.988298501234482,
+    "accuracy": 0.9892280071813285,
+    "precision": 0.9659863945578231,
+    "recall": 0.9530201342281879,
+    "f1": 0.9594594594594594,
+    "roc_auc": 0.9940779636262476,
     "confusion_matrix": [
       [
-        945,
-        20
+        960,
+        5
       ],
       [
-        8,
-        141
+        7,
+        142
       ]
     ],
     "model_name": "Logistic Regression"
   },
-  "n_train": 4458,
+  "test_metrics_optimal_threshold": {
+    "accuracy": 0.9865350089766607,
+    "precision": 0.9785714285714285,
+    "recall": 0.9194630872483222,
+    "f1": 0.9480968858131488,
+    "roc_auc": 0.9940779636262476,
+    "confusion_matrix": [
+      [
+        962,
+        3
+      ],
+      [
+        12,
+        137
+      ]
+    ],
+    "model_name": "Logistic Regression",
+    "threshold": 0.6
+  },
+  "n_train_original": 4458,
+  "n_train_augmented": 4519,
   "n_test": 1114,
+  "ngram_range": [
+    1,
+    2
+  ],
+  "max_features": 5000,
   "random_state": 42
 }

@@ -135,3 +135,21 @@ def test_vocabulary_deterministic_sorting_and_top_2000_consistency():
     assert vec1.feature_names_[:2000] == vec2.feature_names_[:2000]
     assert len(vec1.feature_names_[:2000]) == 2000
 
+
+def test_ngram_extraction_and_roundtrip():
+    docs = [
+        "account suspended verify immediately",
+        "verify immediately to claim prize",
+    ]
+    vec = TfidfVectorizer(max_features=10, ngram_range=(1, 2))
+    vec.fit(docs)
+    assert "verify immediately" in vec.vocabulary_
+    assert "account suspended" in vec.vocabulary_
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        save_path = Path(tmpdir) / "tfidf_ng.npz"
+        vec.save(save_path)
+        loaded = TfidfVectorizer.load(save_path)
+        assert loaded.ngram_range == (1, 2)
+        assert "verify immediately" in loaded.vocabulary_
+

@@ -133,3 +133,26 @@ def test_word_contributions(toy_data):
     assert len(contribs) == len(sample)
     # Features 2 and 3 are spam indicators, should have positive contribution
     assert contribs[2] > contribs[0]
+
+
+def test_lr_loss_convergence(toy_data):
+    X, y = toy_data
+    lr = LogisticRegression(n_features=4, epochs=200, lr=1.0, l2=0.001)
+    lr.fit(X, y)
+    assert len(lr.training_loss_history_) == 200
+    # Loss should decrease over training
+    assert lr.training_loss_history_[-1] < lr.training_loss_history_[0]
+
+
+def test_bernoulli_nb_log_odds_contributions(toy_data):
+    X, y = toy_data
+    bnb = BernoulliNaiveBayes(alpha=1.0)
+    bnb.fit(X, y)
+    sample = X[4]  # sample: [0.1, 0.0, 0.9, 0.7] -> feature 1 is absent (0.0)
+    contribs = bnb.get_word_contributions(sample)
+    # Absent feature 1 must have 0 contribution
+    assert contribs[1] == 0.0
+    # Present features (0, 2, 3) must have non-zero contributions
+    assert contribs[0] != 0.0
+    assert contribs[2] != 0.0
+    assert contribs[3] != 0.0
